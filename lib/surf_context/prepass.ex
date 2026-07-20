@@ -10,7 +10,7 @@ defmodule SurfContext.Prepass do
   > The tokenizer is `@moduledoc false` internal LiveView API. The test suite includes a canary test that fails loudly if an upgrade moves it.
   """
 
-  @default_attr "__context__"
+  @default_attr :__context__
   # components that must not receive the attribute (Phoenix built-ins that declare attrs, would emit verifier warnings, and can't read context).
   # NOTE: live_component/dynamic_component are deliberately NOT skipped, their extra attrs pass through to the rendered component, which is precisely how stateful/dynamic components receive context.
   @default_skip ~w(link form input async_result focus_wrap intersperse)
@@ -20,14 +20,14 @@ defmodule SurfContext.Prepass do
 
   ## Options
 
-    * `:attr` — attribute name to insert (default `"#{@default_attr}"`)
+    * `:attr` — attribute name to insert, as an atom or string (default `#{inspect(@default_attr)}`)
     * `:expr` — expression for the attribute value (derived from the attr — `"@<attr>"` — unless overridden)
     * `:skip` — component names to leave untouched. Entries match local component names (`"link"` for `<.link>`) or full remote tag names (`"Some.Module.render"`). Defaults to `config :surf_context, :skip` or a small list of Phoenix built-ins.
     * `:skip_modules` — modules whose components are all left untouched (e.g. `[MyAppWeb.CoreComponents]`). Matched against the module part of remote tags as written, by suffix segment, so it also matches aliased calls like `<CoreComponents.button>`. Defaults to `config :surf_context, :skip_modules` (`[]`).
     * `:tag_handler` — tag handler for classification (default `Phoenix.LiveView.HTMLEngine`)
   """
   def splice(source, opts \\ []) when is_binary(source) do
-    attr = Keyword.get(opts, :attr, default_attr())
+    attr = Keyword.get(opts, :attr, default_attr()) |> attr_string()
     # derived from the effective attr unless explicitly overridden
     expr = Keyword.get(opts, :expr, Application.get_env(:surf_context, :expr, "@" <> attr))
     skip = Keyword.get(opts, :skip, default_skip())
@@ -52,11 +52,26 @@ defmodule SurfContext.Prepass do
     apply_insertions(source, insertions, insertion)
   end
 
-  def default_attr, do: Application.get_env(:surf_context, :attr, @default_attr)
+  # canonically an ATOM (it's an assign key; the splice string is derived
+  # from it — never the other way around, so no String.to_atom anywhere)
+  def default_attr do
+    case Application.get_env(:surf_context, :attr, @default_attr) do
+      attr when is_atom(attr) ->
+        attr
+
+      other ->
+        raise ArgumentError,
+              "config :surf_context, :attr must be an atom, got: #{inspect(other)}"
+    end
+  end
 
   # derived from the attr name unless explicitly overridden, two independent
-  # knobs would invite a silently-broken pair (attr "ctx" + expr "@__context__")
-  def default_expr, do: Application.get_env(:surf_context, :expr, "@" <> default_attr())
+  # knobs would invite a silently-broken pair (attr :ctx + expr "@__context__")
+  def default_expr,
+    do: Application.get_env(:surf_context, :expr, "@" <> attr_string(default_attr()))
+
+  defp attr_string(attr) when is_atom(attr), do: Atom.to_string(attr)
+  defp attr_string(attr) when is_binary(attr), do: attr
 
   def default_skip, do: Application.get_env(:surf_context, :skip, @default_skip)
 

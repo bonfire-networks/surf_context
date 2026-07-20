@@ -100,8 +100,8 @@ end
 
 ```elixir
 config :surf_context,
-  # attribute/assign name (the injected expression is derived: @<attr>)
-  attr: "__context__",
+  # attribute/assign name, an atom (the injected expression is derived: @<attr>)
+  attr: :__context__,
   # component names never threaded (Phoenix built-ins that declare attrs and can't read context); override replaces the whole list.
   # live_component/dynamic_component ARE threaded: their extra attrs flow to the rendered component, that's how stateful components receive context
   skip: ~w(link form input async_result focus_wrap intersperse),

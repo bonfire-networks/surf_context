@@ -42,7 +42,7 @@ defmodule SurfContext do
   # Components that already declare the attr (e.g. via `context_attr()`) are
   # skipped; modules without Phoenix.Component set up are a no-op.
   defmacro __before_compile__(env) do
-    attr_name = SurfContext.Prepass.default_attr() |> String.to_atom()
+    attr_name = SurfContext.Prepass.default_attr()
     components = Module.get_attribute(env.module, :__components__)
 
     if is_map(components) and map_size(components) > 0 do
@@ -165,5 +165,5 @@ defmodule SurfContext do
     Map.merge(Map.get(assigns, attr_key()) || %{}, Map.new(values))
   end
 
-  defp attr_key, do: SurfContext.Prepass.default_attr() |> String.to_atom()
+  defp attr_key, do: SurfContext.Prepass.default_attr()
 end

@@ -29,7 +29,7 @@ defmodule SurfContext.Component do
   Declares the context attribute on the next function component definition.
   """
   defmacro context_attr do
-    attr = SurfContext.Prepass.default_attr() |> String.to_atom()
+    attr = SurfContext.Prepass.default_attr()
 
     quote do
       require Phoenix.Component
