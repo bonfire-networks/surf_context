@@ -45,6 +45,42 @@ defmodule SurfContext do
     attr_name = SurfContext.Prepass.default_attr()
     components = Module.get_attribute(env.module, :__components__)
 
+    quote do
+      unquote(update_wrapper(env, attr_name))
+      unquote(component_wrappers(env, attr_name, components))
+    end
+  end
+
+  # Live components: the context attr arrives in `update/2`'s assigns, but on
+  # plain LiveView nothing puts it on the socket — the module's own `update/2`
+  # is the only thing that assigns incoming assigns, and many custom updates
+  # (`def update(_assigns, socket)`) ignore them, dropping context. Surface's
+  # LiveComponent wrapper handled this with `move_private_assigns` (it lifted
+  # `:__context__` onto the socket before the user's update). Mirror that here
+  # so a converted stateful component keeps context regardless of its update/2.
+  # (Function components already get context via the render wrappers below.)
+  defp update_wrapper(env, attr_name) do
+    if Module.defines?(env.module, {:update, 2}) do
+      quote do
+        defoverridable update: 2
+
+        def update(assigns, socket) do
+          socket =
+            case assigns do
+              %{unquote(attr_name) => ctx} when not is_nil(ctx) ->
+                Phoenix.Component.assign(socket, unquote(attr_name), ctx)
+
+              _ ->
+                socket
+            end
+
+          super(assigns, socket)
+        end
+      end
+    end
+  end
+
+  defp component_wrappers(env, attr_name, components) do
     if is_map(components) and map_size(components) > 0 do
       {patched, wrapped} =
         Enum.reduce(components, {%{}, []}, fn
