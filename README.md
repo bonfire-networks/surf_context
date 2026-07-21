@@ -8,6 +8,8 @@ LiveView deliberately has [no context API](https://github.com/phoenixframework/p
 
 SurfContext makes the passing invisible: a **compile-time pre-pass** inserts `__context__={@__context__}` into every component call site of your templates, exactly as if you had typed it. Because the output is plain HEEx, change tracking, slots, `:if`/`:for`, and the verifier all behave normally, there is nothing to learn and nothing to debug at runtime.
 
+Migrating off [Surface](https://surface-ui.org)? SurfContext is the companion to [surface_eject](https://github.com/bonfire-networks/surface_eject) (an automated Surface → plain LiveView converter): it replaces Surface's context feature, so `@__context__` reads in converted templates keep working verbatim with zero call-site changes.
+
 ```elixir
 # write once, at the top (mount, plug, wherever)
 socket = SurfContext.put(socket, current_user: user, locale: "fr")
